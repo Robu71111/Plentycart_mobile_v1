@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import productsRaw from '../../data/products.json';
 
@@ -64,16 +64,7 @@ function ProductCard({ product, onPress }: { product: Product; onPress: () => vo
 
 export default function SearchScreen() {
   const router = useRouter();
-  const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
-
-  // Re-focus the search input every time this tab is visited
-  useFocusEffect(
-    useCallback(() => {
-      const timer = setTimeout(() => inputRef.current?.focus(), 100);
-      return () => clearTimeout(timer);
-    }, [])
-  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -90,7 +81,6 @@ export default function SearchScreen() {
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={18} color="#94A3B8" style={styles.searchIcon} />
           <TextInput
-            ref={inputRef}
             style={styles.searchInput}
             value={query}
             onChangeText={setQuery}

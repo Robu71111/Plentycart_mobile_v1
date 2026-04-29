@@ -18,6 +18,7 @@ import { useAuth } from '../../lib/auth';
 import { useCart } from '../../lib/cart';
 import { useCheckout } from '../../lib/checkout';
 import { CheckoutHeader } from '../../components/CheckoutHeader';
+import { PAYMENT_METHODS_KEY, type PaymentMethod } from '../profile/payment-methods';
 
 const ORDERS_KEY = '@plentycart/orders';
 
@@ -50,10 +51,20 @@ export default function PaymentScreen() {
   const tax = subtotal * 0.08;
   const total = subtotal + shippingCost + tax;
 
+  const validateExpiry = (exp: string): string | null => {
+    if (exp.length < 5) return 'Enter expiry as MM/YY.';
+    const [mm, yy] = exp.split('/').map(Number);
+    if (mm < 1 || mm > 12) return 'Month must be 01–12.';
+    const currentYY = new Date().getFullYear() % 100;
+    if (yy < currentYY) return 'Card has expired.';
+    return null;
+  };
+
   const handlePay = async () => {
     const digits = cardNumber.replace(/\s/g, '');
     if (digits.length < 16) { setError('Please enter a valid 16-digit card number.'); return; }
-    if (expiry.length < 5) { setError('Please enter a valid expiry date (MM/YY).'); return; }
+    const expiryError = validateExpiry(expiry);
+    if (expiryError) { setError(expiryError); return; }
     if (cvc.length < 3) { setError('Please enter a valid CVC.'); return; }
     if (!cardName.trim()) { setError('Please enter the cardholder name.'); return; }
     setError('');
@@ -85,6 +96,27 @@ export default function PaymentScreen() {
       await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify([newOrder, ...orders]));
     } catch {
       // continue even if storage fails in demo
+    }
+
+    if (saveCard) {
+      try {
+        const first = digits[0];
+        const brand: PaymentMethod['brand'] =
+          first === '4' ? 'visa' : first === '5' ? 'mastercard' : first === '3' ? 'amex' : 'visa';
+        const raw = await AsyncStorage.getItem(PAYMENT_METHODS_KEY);
+        const methods: PaymentMethod[] = raw ? JSON.parse(raw) : [];
+        const newMethod: PaymentMethod = {
+          id: Date.now().toString(),
+          last4: digits.slice(-4),
+          brand,
+          expiry,
+          name: cardName.trim(),
+          isDefault: methods.length === 0,
+        };
+        await AsyncStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify([...methods, newMethod]));
+      } catch {
+        // non-critical
+      }
     }
 
     setOrderId(orderId);

@@ -56,7 +56,7 @@ export default function OrderDetailScreen() {
     return (
       <SafeAreaView style={styles.center} edges={['top']}>
         <Text style={styles.notFoundText}>Order not found</Text>
-        <TouchableOpacity onPress={() => router.replace('/' as never)} style={styles.homeBtn}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/orders' as never)} style={styles.homeBtn}>
           <Text style={styles.homeBtnText}>Go Home</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -66,7 +66,7 @@ export default function OrderDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace('/' as never)} hitSlop={8}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/orders' as never)} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color="#1E293B" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,124 @@ type Product = {
 
 const products: Product[] = productsRaw as Product[];
 
+// --- Deterministic review generator ---
+
+function seededRand(seed: number) {
+  const s = Math.sin(seed) * 43758.5453123;
+  return s - Math.floor(s);
+}
+
+const REVIEWER_NAMES = [
+  'Alex M.', 'Jordan K.', 'Taylor R.', 'Sam W.', 'Morgan B.',
+  'Riley C.', 'Casey H.', 'Drew P.', 'Blake N.', 'Quinn D.',
+  'Avery L.', 'Skyler T.', 'Reese A.', 'Finley J.', 'Parker S.',
+];
+
+const REVIEW_TEXTS: Record<string, string[]> = {
+  Electronics: [
+    'Works exactly as described. Setup was easy and the build quality feels premium.',
+    'Excellent product! Battery life is impressive and performance is snappy.',
+    'Great value for the price. Would definitely recommend to anyone looking for this category.',
+    'Solid purchase. Packaging was pristine and it arrived earlier than expected.',
+    'Really happy with this. The display quality is way better than I anticipated.',
+    'Does everything I need it to do. Very satisfied with this purchase.',
+    'Top notch quality. Feels well-made and the performance is excellent.',
+  ],
+  Skincare: [
+    'My skin feels so much smoother after just two weeks of use. Love this!',
+    'Finally found something that actually works for my skin type. Highly recommend.',
+    'The texture is lightweight and absorbs quickly. No greasy residue at all.',
+    'Noticed a real difference in hydration after a few days. Will repurchase.',
+    'Great formula. Gentle on sensitive skin and the scent is subtle and pleasant.',
+    'This has become a staple in my routine. My skin looks noticeably healthier.',
+    'Worth every penny. The packaging is also really nice and hygienic.',
+  ],
+  'Health & Wellness': [
+    'Really helpful for my daily routine. I feel more energetic throughout the day.',
+    'Great quality supplement. Easy to take and no aftertaste whatsoever.',
+    'Been using this for a month and I can genuinely feel the difference.',
+    'Good value. The ingredients list is clean and transparent — I appreciate that.',
+    'Excellent product for the price. Delivery was fast and packaging secure.',
+    'Works as advertised. Happy with the results so far after consistent use.',
+    'Really impressed by the quality. My go-to brand now for this category.',
+  ],
+  Perfumes: [
+    'The sillage is incredible — I kept getting compliments all day long.',
+    'Long-lasting and the dry-down is absolutely beautiful. Worth the price.',
+    'Exactly as described. The opening notes are fresh and the base is warm and cozy.',
+    'I was hesitant to buy blind but I\'m so glad I did. This is stunning.',
+    'Great projection and the bottle looks gorgeous on my vanity.',
+    'This scent is unique and sophisticated. Gets better as it dries down.',
+    'Received several compliments within the first hour of wearing this. Obsessed.',
+  ],
+};
+
+const FALLBACK_REVIEWS = [
+  'Really pleased with this purchase. Great quality and fast delivery.',
+  'Exceeded my expectations. Would buy from here again without hesitation.',
+  'Good product, does what it says on the tin. Solid value.',
+  'Happy with this. Packaging was careful and everything arrived in perfect condition.',
+  'Highly recommend. Quality is top-notch for the price point.',
+];
+
+type Review = {
+  id: string;
+  author: string;
+  rating: number;
+  date: string;
+  body: string;
+};
+
+function generateReviews(product: Product): Review[] {
+  const pid = parseInt(product.id, 10);
+  const count = 3 + Math.floor(seededRand(pid * 7) * 3); // 3–5
+  const pool = REVIEW_TEXTS[product.category] ?? FALLBACK_REVIEWS;
+  const usedTextIdx = new Set<number>();
+  const usedNameIdx = new Set<number>();
+  const reviews: Review[] = [];
+
+  const now = new Date(2026, 3, 29); // deterministic "today"
+
+  for (let i = 0; i < count; i++) {
+    const r1 = seededRand(pid * 31 + i * 17);
+    const r2 = seededRand(pid * 53 + i * 29);
+    const r3 = seededRand(pid * 11 + i * 43);
+    const r4 = seededRand(pid * 67 + i * 7);
+
+    // Pick unique reviewer name
+    let nameIdx = Math.floor(r1 * REVIEWER_NAMES.length);
+    while (usedNameIdx.has(nameIdx)) nameIdx = (nameIdx + 1) % REVIEWER_NAMES.length;
+    usedNameIdx.add(nameIdx);
+
+    // Pick unique review text
+    let textIdx = Math.floor(r2 * pool.length);
+    while (usedTextIdx.has(textIdx)) textIdx = (textIdx + 1) % pool.length;
+    usedTextIdx.add(textIdx);
+
+    // Rating weighted around product.rating (±1 star, biased toward the actual rating)
+    const base = Math.round(product.rating);
+    const offset = r3 < 0.15 ? -1 : r3 > 0.85 ? 1 : 0;
+    const rating = Math.min(5, Math.max(1, base + offset));
+
+    // Date within last 6 months
+    const daysAgo = Math.floor(r4 * 180) + 1;
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    reviews.push({
+      id: `${product.id}-${i}`,
+      author: REVIEWER_NAMES[nameIdx],
+      rating,
+      date,
+      body: pool[textIdx],
+    });
+  }
+  return reviews;
+}
+
+// --- End review generator ---
+
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -46,6 +164,7 @@ export default function ProductScreen() {
   const relatedProducts = product
     ? products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4)
     : [];
+  const reviews = useMemo(() => (product ? generateReviews(product) : []), [product?.id]);
 
   const showToast = useCallback(() => {
     setToastVisible(true);
@@ -185,6 +304,45 @@ export default function ProductScreen() {
           {/* Description */}
           <Text style={styles.sectionHeading}>Description</Text>
           <Text style={styles.description}>{product.description}</Text>
+
+          {/* Reviews */}
+          <View style={styles.divider} />
+          <View style={styles.reviewsHeader}>
+            <Text style={styles.sectionHeading}>Customer Reviews</Text>
+            <View style={styles.ratingPill}>
+              <Text style={styles.ratingPillStar}>★</Text>
+              <Text style={styles.ratingPillValue}>{product.rating.toFixed(1)}</Text>
+            </View>
+          </View>
+          {reviews.map((rev) => (
+            <View key={rev.id} style={styles.reviewCard}>
+              <View style={styles.reviewTop}>
+                <View style={styles.reviewAvatar}>
+                  <Text style={styles.reviewAvatarText}>{rev.author[0]}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.reviewNameRow}>
+                    <Text style={styles.reviewAuthor}>{rev.author}</Text>
+                    <View style={styles.verifiedBadge}>
+                      <Ionicons name="checkmark-circle" size={11} color="#16A34A" />
+                      <Text style={styles.verifiedText}>Verified</Text>
+                    </View>
+                  </View>
+                  <View style={styles.reviewStars}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Text key={s} style={{ fontSize: 12, color: s <= rev.rating ? '#F59E0B' : '#E2E8F0' }}>★</Text>
+                    ))}
+                    <Text style={styles.reviewDate}>{rev.date}</Text>
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.reviewBody}>{rev.body}</Text>
+            </View>
+          ))}
+          <TouchableOpacity style={styles.viewAllReviews} activeOpacity={0.7}>
+            <Text style={styles.viewAllReviewsText}>View all {product.review_count} reviews</Text>
+            <Ionicons name="chevron-forward" size={15} color="#1A56DB" />
+          </TouchableOpacity>
 
           {/* Related products */}
           {relatedProducts.length > 0 && (
@@ -378,6 +536,33 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   toastText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+
+  reviewsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  ratingPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#FEF9C3', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+  },
+  ratingPillStar: { fontSize: 13, color: '#F59E0B' },
+  ratingPillValue: { fontSize: 13, fontWeight: '700', color: '#92400E' },
+  reviewCard: { marginBottom: 16 },
+  reviewTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
+  reviewAvatar: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  reviewAvatarText: { fontSize: 14, fontWeight: '700', color: '#1A56DB' },
+  reviewNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  reviewAuthor: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  verifiedText: { fontSize: 11, color: '#16A34A', fontWeight: '600' },
+  reviewStars: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 },
+  reviewDate: { fontSize: 11, color: '#94A3B8', marginLeft: 6 },
+  reviewBody: { fontSize: 13, color: '#475569', lineHeight: 20 },
+  viewAllReviews: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingVertical: 12, justifyContent: 'center',
+  },
+  viewAllReviewsText: { fontSize: 14, fontWeight: '600', color: '#1A56DB' },
 
   notFoundContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   notFoundText: { fontSize: 18, fontWeight: '700', color: '#1E293B' },

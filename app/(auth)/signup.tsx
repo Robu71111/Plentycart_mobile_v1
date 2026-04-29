@@ -22,27 +22,41 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [systemError, setSystemError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
   const handleSignUp = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Please fill in all fields.');
-      return;
+    let valid = true;
+    if (!name.trim()) {
+      setNameError('Please enter your full name.');
+      valid = false;
+    } else {
+      setNameError('');
+    }
+    if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+      setEmailError('Enter a valid email address.');
+      valid = false;
+    } else {
+      setEmailError('');
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
+      setPasswordError('Password must be at least 6 characters.');
+      valid = false;
+    } else {
+      setPasswordError('');
     }
-    setError('');
+    if (!valid) return;
+    setSystemError('');
     setIsSubmitting(true);
     try {
       await signUp(email.trim(), password, name.trim());
-      // AuthGuard in _layout.tsx handles the redirect once user state updates
     } catch {
-      setError('Something went wrong. Please try again.');
+      setSystemError('Something went wrong. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -62,18 +76,18 @@ export default function SignupScreen() {
           <Text style={styles.wordmark}>Plentycart</Text>
           <Text style={styles.tagline}>Create your account</Text>
 
-          {error ? (
+          {systemError ? (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{systemError}</Text>
             </View>
           ) : null}
 
           {/* Full name */}
           <Text style={styles.label}>Full Name</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, !!nameError && styles.inputError]}
             value={name}
-            onChangeText={setName}
+            onChangeText={(v) => { setName(v); setNameError(''); }}
             autoCapitalize="words"
             autoComplete="name"
             autoCorrect={false}
@@ -82,14 +96,15 @@ export default function SignupScreen() {
             returnKeyType="next"
             onSubmitEditing={() => emailRef.current?.focus()}
           />
+          {nameError ? <Text style={styles.fieldError}>{nameError}</Text> : null}
 
           {/* Email */}
-          <Text style={styles.label}>Email</Text>
+          <Text style={[styles.label, { marginTop: nameError ? 12 : 0 }]}>Email</Text>
           <TextInput
             ref={emailRef}
-            style={styles.input}
+            style={[styles.input, !!emailError && styles.inputError]}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => { setEmail(v); setEmailError(''); }}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
@@ -99,20 +114,22 @@ export default function SignupScreen() {
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
+          {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
 
           {/* Password */}
-          <Text style={styles.label}>Password</Text>
+          <Text style={[styles.label, { marginTop: emailError ? 12 : 0 }]}>Password</Text>
           <TextInput
             ref={passwordRef}
-            style={styles.input}
+            style={[styles.input, !!passwordError && styles.inputError]}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(v) => { setPassword(v); setPasswordError(''); }}
             secureTextEntry
             placeholder="Min. 6 characters"
             placeholderTextColor="#94A3B8"
             returnKeyType="done"
             onSubmitEditing={handleSignUp}
           />
+          {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
 
           {/* Create Account button */}
           <TouchableOpacity
@@ -179,6 +196,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#DC2626',
   },
+  inputError: { borderColor: '#DC2626' },
+  fieldError: { fontSize: 12, color: '#DC2626', marginTop: -14, marginBottom: 14 },
   label: {
     fontSize: 14,
     fontWeight: '600',

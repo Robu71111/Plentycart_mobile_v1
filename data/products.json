@@ -7,7 +7,7 @@
     "price": 79,
     "compare_price": 99,
     "category": "Electronics",
-    "image": "https://picsum.photos/seed/earbuds/600/600",
+    "image": "https://loremflickr.com/600/600/earbuds,product",
     "stock": 45,
     "rating": 4.6,
     "review_count": 312
@@ -20,7 +20,7 @@
     "price": 149,
     "compare_price": 199,
     "category": "Electronics",
-    "image": "https://picsum.photos/seed/smartwatch/600/600",
+    "image": "https://loremflickr.com/600/600/smartwatch,product",
     "stock": 28,
     "rating": 4.5,
     "review_count": 187
@@ -33,7 +33,7 @@
     "price": 59,
     "compare_price": null,
     "category": "Electronics",
-    "image": "https://picsum.photos/seed/speaker/600/600",
+    "image": "https://loremflickr.com/600/600/bluetooth,speaker",
     "stock": 63,
     "rating": 4.4,
     "review_count": 228
@@ -46,7 +46,7 @@
     "price": 24,
     "compare_price": null,
     "category": "Electronics",
-    "image": "https://picsum.photos/seed/phonestand/600/600",
+    "image": "https://loremflickr.com/600/600/phone,stand",
     "stock": 92,
     "rating": 4.3,
     "review_count": 156
@@ -59,7 +59,7 @@
     "price": 49,
     "compare_price": 65,
     "category": "Electronics",
-    "image": "https://picsum.photos/seed/powerbank/600/600",
+    "image": "https://loremflickr.com/600/600/powerbank,charger",
     "stock": 37,
     "rating": 4.7,
     "review_count": 401
@@ -72,7 +72,7 @@
     "price": 34,
     "compare_price": 45,
     "category": "Skincare",
-    "image": "https://picsum.photos/seed/vitaminc/600/600",
+    "image": "https://loremflickr.com/600/600/serum,skincare",
     "stock": 54,
     "rating": 4.8,
     "review_count": 489
@@ -85,7 +85,7 @@
     "price": 28,
     "compare_price": null,
     "category": "Skincare",
-    "image": "https://picsum.photos/seed/hyaluronic/600/600",
+    "image": "https://loremflickr.com/600/600/moisturizer,beauty",
     "stock": 71,
     "rating": 4.6,
     "review_count": 334
@@ -98,7 +98,7 @@
     "price": 42,
     "compare_price": 58,
     "category": "Skincare",
-    "image": "https://picsum.photos/seed/retinol/600/600",
+    "image": "https://loremflickr.com/600/600/cream,skincare",
     "stock": 33,
     "rating": 4.5,
     "review_count": 267
@@ -111,7 +111,7 @@
     "price": 22,
     "compare_price": null,
     "category": "Skincare",
-    "image": "https://picsum.photos/seed/sunscreen/600/600",
+    "image": "https://loremflickr.com/600/600/sunscreen,skincare",
     "stock": 88,
     "rating": 4.4,
     "review_count": 198
@@ -124,7 +124,7 @@
     "price": 18,
     "compare_price": 24,
     "category": "Skincare",
-    "image": "https://picsum.photos/seed/cleanser/600/600",
+    "image": "https://loremflickr.com/600/600/cleanser,beauty",
     "stock": 76,
     "rating": 4.3,
     "review_count": 142
@@ -137,7 +137,7 @@
     "price": 26,
     "compare_price": 32,
     "category": "Health & Wellness",
-    "image": "https://picsum.photos/seed/multivitamin/600/600",
+    "image": "https://loremflickr.com/600/600/vitamins,health",
     "stock": 59,
     "rating": 4.7,
     "review_count": 376
@@ -150,7 +150,7 @@
     "price": 54,
     "compare_price": 69,
     "category": "Health & Wellness",
-    "image": "https://picsum.photos/seed/protein/600/600",
+    "image": "https://loremflickr.com/600/600/protein,fitness",
     "stock": 41,
     "rating": 4.5,
     "review_count": 293
@@ -163,7 +163,7 @@
     "price": 32,
     "compare_price": null,
     "category": "Health & Wellness",
-    "image": "https://picsum.photos/seed/bands/600/600",
+    "image": "https://loremflickr.com/600/600/fitness,exercise",
     "stock": 67,
     "rating": 4.6,
     "review_count": 214
@@ -176,7 +176,7 @@
     "price": 45,
     "compare_price": 55,
     "category": "Health & Wellness",
-    "image": "https://picsum.photos/seed/yogamat/600/600",
+    "image": "https://loremflickr.com/600/600/yoga,mat",
     "stock": 23,
     "rating": 4.8,
     "review_count": 431
@@ -189,7 +189,7 @@
     "price": 19,
     "compare_price": null,
     "category": "Health & Wellness",
-    "image": "https://picsum.photos/seed/sleepaid/600/600",
+    "image": "https://loremflickr.com/600/600/supplements,health",
     "stock": 82,
     "rating": 4.4,
     "review_count": 318
@@ -202,7 +202,7 @@
     "price": 89,
     "compare_price": 110,
     "category": "Perfumes",
-    "image": "https://picsum.photos/seed/oudnoir/600/600",
+    "image": "https://loremflickr.com/600/600/perfume,luxury",
     "stock": 18,
     "rating": 4.9,
     "review_count": 167
@@ -215,7 +215,7 @@
     "price": 72,
     "compare_price": null,
     "category": "Perfumes",
-    "image": "https://picsum.photos/seed/vanillaamber/600/600",
+    "image": "https://loremflickr.com/600/600/perfume,fragrance",
     "stock": 31,
     "rating": 4.7,
     "review_count": 203
@@ -228,7 +228,7 @@
     "price": 58,
     "compare_price": 74,
     "category": "Perfumes",
-    "image": "https://picsum.photos/seed/citrusbloom/600/600",
+    "image": "https://loremflickr.com/600/600/cologne,fragrance",
     "stock": 47,
     "rating": 4.5,
     "review_count": 145
@@ -241,7 +241,7 @@
     "price": 38,
     "compare_price": null,
     "category": "Perfumes",
-    "image": "https://picsum.photos/seed/sandalwood/600/600",
+    "image": "https://loremflickr.com/600/600/fragrance,beauty",
     "stock": 55,
     "rating": 4.3,
     "review_count": 89
@@ -254,7 +254,7 @@
     "price": 95,
     "compare_price": 120,
     "category": "Perfumes",
-    "image": "https://picsum.photos/seed/rosegold/600/600",
+    "image": "https://loremflickr.com/600/600/perfume,rose",
     "stock": 12,
     "rating": 4.8,
     "review_count": 241

@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 
 const STORAGE_KEY = 'plentycart_user';
 
-type AuthUser = { email: string; name: string };
+type AuthUser = { email: string; name: string; phone?: string };
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -11,6 +11,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (fields: Partial<Pick<AuthUser, 'name' | 'phone'>>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -45,8 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const updateUser = async (fields: Partial<Pick<AuthUser, 'name' | 'phone'>>) => {
+    if (!user) return;
+    const updated = { ...user, ...fields };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    setUser(updated);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

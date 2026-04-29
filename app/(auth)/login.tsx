@@ -21,22 +21,33 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [systemError, setSystemError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const passwordRef = useRef<TextInput>(null);
 
   const handleSignIn = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields.');
-      return;
+    let valid = true;
+    if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+      setEmailError('Enter a valid email address.');
+      valid = false;
+    } else {
+      setEmailError('');
     }
-    setError('');
+    if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      valid = false;
+    } else {
+      setPasswordError('');
+    }
+    if (!valid) return;
+    setSystemError('');
     setIsSubmitting(true);
     try {
       await signIn(email.trim(), password);
-      // AuthGuard in _layout.tsx handles the redirect once user state updates
     } catch {
-      setError('Something went wrong. Please try again.');
+      setSystemError('Something went wrong. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -56,18 +67,18 @@ export default function LoginScreen() {
           <Text style={styles.wordmark}>Plentycart</Text>
           <Text style={styles.tagline}>Sign in to your account</Text>
 
-          {error ? (
+          {systemError ? (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{systemError}</Text>
             </View>
           ) : null}
 
           {/* Email */}
           <Text style={styles.label}>Email</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, !!emailError && styles.inputError]}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => { setEmail(v); setEmailError(''); }}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
@@ -77,20 +88,22 @@ export default function LoginScreen() {
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
+          {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
 
           {/* Password */}
-          <Text style={styles.label}>Password</Text>
+          <Text style={[styles.label, { marginTop: emailError ? 12 : 0 }]}>Password</Text>
           <TextInput
             ref={passwordRef}
-            style={styles.input}
+            style={[styles.input, !!passwordError && styles.inputError]}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(v) => { setPassword(v); setPasswordError(''); }}
             secureTextEntry
             placeholder="Enter your password"
             placeholderTextColor="#94A3B8"
             returnKeyType="done"
             onSubmitEditing={handleSignIn}
           />
+          {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
 
           {/* Sign In button */}
           <TouchableOpacity
@@ -157,6 +170,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#DC2626',
   },
+  inputError: { borderColor: '#DC2626' },
+  fieldError: { fontSize: 12, color: '#DC2626', marginTop: -14, marginBottom: 14 },
   label: {
     fontSize: 14,
     fontWeight: '600',
