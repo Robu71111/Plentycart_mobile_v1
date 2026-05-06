@@ -63,7 +63,13 @@ export default function ProfileScreen() {
           <MenuItem
             icon="receipt-outline"
             label="My Orders"
-            onPress={() => router.push('/(tabs)/orders' as never)}
+            onPress={() => router.push('/profile/orders' as never)}
+          />
+          <View style={styles.menuDivider} />
+          <MenuItem
+            icon="refresh-outline"
+            label="My Returns"
+            onPress={() => router.push('/profile/returns' as never)}
           />
           <View style={styles.menuDivider} />
           <MenuItem
@@ -118,13 +124,13 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#fff' },
   header: {
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: 1, borderBottomColor: '#E2E8F0',
   },
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#1E293B' },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollContent: { padding: 16, gap: 8, paddingBottom: 40 },
   userCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,

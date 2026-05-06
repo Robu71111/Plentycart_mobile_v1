@@ -78,7 +78,7 @@ export default function PaymentMethodsScreen() {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
             {methods.map((m) => (
               <View key={m.id} style={styles.card}>
                 <View style={styles.cardLeft}>
@@ -121,14 +121,15 @@ export default function PaymentMethodsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#fff',
     borderBottomWidth: 1, borderBottomColor: '#E2E8F0',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1E293B' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 12 },
+  scroll: { flex: 1, backgroundColor: '#F8FAFC' },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 12, backgroundColor: '#F8FAFC' },
   emptyIcon: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: '#F1F5F9',
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,

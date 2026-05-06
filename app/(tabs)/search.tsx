@@ -1,23 +1,30 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   TextInput,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  getRecentlyViewed,
+  clearRecentlyViewed,
+  type RecentProduct,
+} from '../../lib/recently-viewed';
 import productsRaw from '../../data/products.json';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PAD = 16;
 const CARD_GAP = 12;
 const CARD_WIDTH = (SCREEN_WIDTH - H_PAD * 2 - CARD_GAP) / 2;
+const RECENT_CARD_WIDTH = 140;
 
 type Product = {
   id: string;
@@ -35,13 +42,15 @@ const products: Product[] = productsRaw as Product[];
 function ProductCard({ product, onPress }: { product: Product; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.productCard} onPress={onPress} activeOpacity={0.85}>
-      <Image
-        source={{ uri: product.image }}
-        style={styles.productImage}
-        contentFit="cover"
-        placeholder={{ color: '#F1F5F9' }}
-        transition={200}
-      />
+      <View style={styles.imageWrapper}>
+        <Image
+          source={{ uri: product.image }}
+          style={[styles.productImage, { borderRadius: 10 }]}
+          contentFit="cover"
+          placeholder={{ color: '#F1F5F9' }}
+          transition={200}
+        />
+      </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>
           {product.name}
@@ -62,9 +71,46 @@ function ProductCard({ product, onPress }: { product: Product; onPress: () => vo
   );
 }
 
+function RecentCard({ product, onPress }: { product: RecentProduct; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.recentCard} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.imageWrapper}>
+        <Image
+          source={{ uri: product.image }}
+          style={[styles.recentImage, { borderRadius: 10 }]}
+          contentFit="cover"
+          placeholder={{ color: '#F1F5F9' }}
+          transition={200}
+        />
+      </View>
+      <View style={styles.recentInfo}>
+        <Text style={styles.recentName} numberOfLines={1}>{product.name}</Text>
+        <Text style={styles.recentPrice}>${product.price}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function SearchScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentProduct[]>([]);
+
+  const loadRecentlyViewed = useCallback(async () => {
+    const list = await getRecentlyViewed();
+    setRecentlyViewed(list);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRecentlyViewed();
+    }, [loadRecentlyViewed])
+  );
+
+  const handleClearRecent = useCallback(async () => {
+    await clearRecentlyViewed();
+    setRecentlyViewed([]);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -73,6 +119,36 @@ export default function SearchScreen() {
   }, [query]);
 
   const goToProduct = (id: string) => router.push(`/product/${id}` as never);
+
+  const listHeader =
+    query.length === 0 ? (
+      <View>
+        {recentlyViewed.length > 0 && (
+          <View style={styles.recentSection}>
+            <View style={styles.recentHeaderRow}>
+              <Text style={styles.sectionTitle}>Recently Viewed</Text>
+              <TouchableOpacity onPress={handleClearRecent} hitSlop={8}>
+                <Text style={styles.clearLink}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recentScrollContent}
+            >
+              {recentlyViewed.map((p) => (
+                <RecentCard key={p.id} product={p} onPress={() => goToProduct(p.id)} />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        <Text style={styles.browseHeading}>Browse all products</Text>
+      </View>
+    ) : (
+      <Text style={styles.browseHeading}>
+        {filtered.length} result{filtered.length !== 1 ? 's' : ''} for "{query}"
+      </Text>
+    );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -100,7 +176,6 @@ export default function SearchScreen() {
       </View>
 
       {query.length > 0 && filtered.length === 0 ? (
-        /* No results */
         <View style={styles.noResults}>
           <Ionicons name="search-outline" size={44} color="#CBD5E1" />
           <Text style={styles.noResultsHeading}>No results for "{query}"</Text>
@@ -110,20 +185,13 @@ export default function SearchScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
+          style={styles.scroll}
           numColumns={2}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={
-            query.length === 0 ? (
-              <Text style={styles.browseHeading}>Browse all products</Text>
-            ) : (
-              <Text style={styles.browseHeading}>
-                {filtered.length} result{filtered.length !== 1 ? 's' : ''} for "{query}"
-              </Text>
-            )
-          }
+          ListHeaderComponent={listHeader}
           renderItem={({ item }) => (
             <ProductCard product={item} onPress={() => goToProduct(item.id)} />
           )}
@@ -134,7 +202,7 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#fff' },
 
   searchBarRow: {
     backgroundColor: '#fff',
@@ -155,25 +223,58 @@ const styles = StyleSheet.create({
   searchIcon: { flexShrink: 0 },
   searchInput: { flex: 1, fontSize: 15, color: '#1E293B', padding: 0 },
 
+  scroll: { flex: 1, backgroundColor: '#F8FAFC' },
   noResults: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
     paddingHorizontal: 32,
+    backgroundColor: '#F8FAFC',
   },
   noResultsHeading: { fontSize: 17, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
   noResultsSub: { fontSize: 14, color: '#64748B', textAlign: 'center' },
 
-  browseHeading: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-    paddingBottom: 12,
-  },
-
   listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 },
   columnWrapper: { gap: 12, marginBottom: 12 },
+
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
+  browseHeading: { fontSize: 16, fontWeight: '700', color: '#1E293B', paddingBottom: 12 },
+
+  imageWrapper: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+
+  // Recently viewed
+  recentSection: { marginBottom: 20 },
+  recentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  clearLink: { fontSize: 13, fontWeight: '600', color: '#94A3B8' },
+  recentScrollContent: { gap: 10, paddingRight: 4 },
+  recentCard: {
+    width: RECENT_CARD_WIDTH,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 5,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  recentImage: { width: RECENT_CARD_WIDTH, height: 110, backgroundColor: '#F1F5F9' },
+  recentInfo: { padding: 8 },
+  recentName: { fontSize: 12, fontWeight: '600', color: '#1E293B', marginBottom: 3, lineHeight: 16 },
+  recentPrice: { fontSize: 13, fontWeight: '700', color: '#1A56DB' },
+
+  // Product grid
   productCard: {
     width: CARD_WIDTH,
     borderRadius: 12,

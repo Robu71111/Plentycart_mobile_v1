@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,9 +24,7 @@ type Order = {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: 'short', day: 'numeric', year: 'numeric',
   });
 }
 
@@ -85,7 +85,7 @@ function getStatusDisplay(order: Order): { label: string; color: string } {
   };
 }
 
-export default function OrdersScreen() {
+export default function ProfileOrdersScreen() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,36 +94,32 @@ export default function OrdersScreen() {
     useCallback(() => {
       setLoading(true);
       AsyncStorage.getItem(ORDERS_KEY)
-        .then((raw) => {
-          setOrders(raw ? JSON.parse(raw) : []);
-        })
+        .then((raw) => setOrders(raw ? JSON.parse(raw) : []))
         .finally(() => setLoading(false));
     }, [])
   );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Orders</Text>
-        </View>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#1A56DB" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Orders</Text>
-        {orders.length > 0 && (
-          <Text style={styles.headerSub}>{orders.length} order{orders.length !== 1 ? 's' : ''}</Text>
-        )}
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+          <Ionicons name="chevron-back" size={24} color="#1E293B" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>My Orders</Text>
+          {!loading && orders.length > 0 && (
+            <Text style={styles.headerSub}>
+              {orders.length} order{orders.length !== 1 ? 's' : ''}
+            </Text>
+          )}
+        </View>
       </View>
 
-      {orders.length === 0 ? (
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#1A56DB" />
+        </View>
+      ) : orders.length === 0 ? (
         <View style={styles.centered}>
           <View style={styles.emptyIconCircle}>
             <Ionicons name="receipt-outline" size={36} color="#94A3B8" />
@@ -165,8 +161,7 @@ export default function OrdersScreen() {
                     </View>
                   </View>
                   <Text style={styles.orderMeta}>
-                    {itemCount} item{itemCount !== 1 ? 's' : ''} ·{' '}
-                    {item.shipping?.name ?? 'Standard'}
+                    {itemCount} item{itemCount !== 1 ? 's' : ''} · {item.shipping?.name ?? 'Standard'}
                   </Text>
                   <View style={styles.orderBottomRow}>
                     <Text style={styles.orderDate}>{formatDate(item.placedAt)}</Text>
@@ -185,59 +180,44 @@ export default function OrdersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#1E293B' },
-  headerSub: { fontSize: 13, color: '#64748B', marginTop: 2 },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1E293B' },
+  headerSub: { fontSize: 12, color: '#64748B', marginTop: 1 },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32, backgroundColor: '#F8FAFC' },
   scroll: { flex: 1, backgroundColor: '#F8FAFC' },
   emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+    width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
   },
   emptyHeading: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
   emptySubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center' },
   shopBtn: {
-    backgroundColor: '#1A56DB',
-    paddingHorizontal: 28,
-    paddingVertical: 13,
-    borderRadius: 12,
-    marginTop: 8,
+    backgroundColor: '#1A56DB', paddingHorizontal: 28, paddingVertical: 13,
+    borderRadius: 12, marginTop: 8,
   },
   shopBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   listContent: { padding: 12, gap: 10, paddingBottom: 32 },
   orderCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#fff', borderRadius: 12, padding: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
   orderIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#EEF2FF',
+    alignItems: 'center', justifyContent: 'center',
   },
   orderInfo: { flex: 1, gap: 3 },
   orderTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

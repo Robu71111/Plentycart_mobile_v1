@@ -43,13 +43,15 @@ const featuredProducts = FEATURED_IDS.map((id) => products.find((p) => p.id === 
 function FeaturedCard({ product, onPress }: { product: Product; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.featuredCard} onPress={onPress} activeOpacity={0.85}>
-      <Image
-        source={{ uri: product.image }}
-        style={styles.featuredImage}
-        contentFit="cover"
-        placeholder={{ color: '#F1F5F9' }}
-        transition={300}
-      />
+      <View style={styles.imageWrapper}>
+        <Image
+          source={{ uri: product.image }}
+          style={styles.featuredImage}
+          contentFit="cover"
+          placeholder={{ color: '#F1F5F9' }}
+          transition={300}
+        />
+      </View>
       <View style={styles.featuredInfo}>
         <Text style={styles.featuredName} numberOfLines={1}>
           {product.name}
@@ -63,13 +65,15 @@ function FeaturedCard({ product, onPress }: { product: Product; onPress: () => v
 function ProductCard({ product, onPress }: { product: Product; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.productCard} onPress={onPress} activeOpacity={0.85}>
-      <Image
-        source={{ uri: product.image }}
-        style={styles.productImage}
-        contentFit="cover"
-        placeholder={{ color: '#F1F5F9' }}
-        transition={300}
-      />
+      <View style={styles.imageWrapper}>
+        <Image
+          source={{ uri: product.image }}
+          style={styles.productImage}
+          contentFit="cover"
+          placeholder={{ color: '#F1F5F9' }}
+          transition={300}
+        />
+      </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>
           {product.name}
@@ -119,6 +123,17 @@ export default function HomeScreen() {
 
   const listHeader = (
     <View>
+      <View style={styles.topBar}>
+        <Text style={styles.wordmark}>Plentycart</Text>
+        <TouchableOpacity
+          style={styles.avatar}
+          onPress={() => router.push('/profile' as never)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.avatarText}>{initial}</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.greeting}>
         <Text style={styles.greetingName}>Hi, {firstName}</Text>
         <Text style={styles.greetingSubtitle}>What are you shopping for today?</Text>
@@ -171,17 +186,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.topBar}>
-        <Text style={styles.wordmark}>Plentycart</Text>
-        <TouchableOpacity
-          style={styles.avatar}
-          onPress={() => router.push('/(tabs)/profile' as never)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.avatarText}>{initial}</Text>
-        </TouchableOpacity>
-      </View>
-
       <FlatList
         data={filteredProducts}
         keyExtractor={(item) => item.id}
@@ -257,11 +261,8 @@ const styles = StyleSheet.create({
     width: 160,
     borderRadius: 12,
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
   },
   featuredImage: { width: 160, height: 140, backgroundColor: '#F1F5F9' },
@@ -275,11 +276,13 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: 12,
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  imageWrapper: {
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
   },
   productImage: { width: '100%', aspectRatio: 1, backgroundColor: '#F1F5F9' },

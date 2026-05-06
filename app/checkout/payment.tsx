@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Platform,
   StyleSheet,
   ActivityIndicator,
+  Keyboard,
+  InputAccessoryView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -45,6 +47,16 @@ export default function PaymentScreen() {
   const [saveCard, setSaveCard] = useState(false);
   const [error, setError] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  const INPUT_ACCESSORY_ID = 'payment-done-toolbar';
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const shippingCost = shippingMethod?.price ?? 5.99;
@@ -83,7 +95,7 @@ export default function PaymentScreen() {
       tax,
       shippingCost,
       total,
-      status: 'Processing',
+      status: 'ORDER_PLACED',
       placedAt: new Date().toISOString(),
       trackingNumber,
     };
@@ -159,6 +171,9 @@ export default function PaymentScreen() {
                 placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
                 maxLength={19}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
               <Ionicons name="card-outline" size={20} color="#94A3B8" style={styles.cardIcon} />
             </View>
@@ -172,6 +187,9 @@ export default function PaymentScreen() {
                 placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
                 maxLength={5}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
               <View style={styles.cardVerticalDivider} />
               <TextInput
@@ -183,6 +201,9 @@ export default function PaymentScreen() {
                 keyboardType="numeric"
                 secureTextEntry
                 maxLength={4}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
               />
             </View>
           </View>
@@ -197,6 +218,9 @@ export default function PaymentScreen() {
               placeholder="Name on card"
               placeholderTextColor="#94A3B8"
               autoCapitalize="words"
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              inputAccessoryViewID={Platform.OS === 'ios' ? INPUT_ACCESSORY_ID : undefined}
             />
           </View>
 
@@ -236,6 +260,14 @@ export default function PaymentScreen() {
             </View>
           </View>
         </ScrollView>
+
+        {Platform.OS === 'android' && keyboardVisible && (
+          <View style={styles.keyboardToolbar}>
+            <TouchableOpacity onPress={() => Keyboard.dismiss()} hitSlop={8}>
+              <Text style={styles.keyboardToolbarDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
@@ -258,12 +290,34 @@ export default function PaymentScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={INPUT_ACCESSORY_ID}>
+          <View style={styles.keyboardToolbar}>
+            <TouchableOpacity onPress={() => Keyboard.dismiss()} hitSlop={8}>
+              <Text style={styles.keyboardToolbarDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
+
+  keyboardToolbar: {
+    height: 44,
+    backgroundColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  keyboardToolbarDoneText: { color: '#1A56DB', fontWeight: '700', fontSize: 16 },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 16, paddingBottom: 24 },
 

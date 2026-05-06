@@ -135,7 +135,7 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#fff' },
 
   header: {
     backgroundColor: '#fff',
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#1E293B' },
   headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
 
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, backgroundColor: '#F8FAFC' },
   emptyIconCircle: {
     width: 88,
     height: 88,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   browseBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollContent: { padding: 12, gap: 12 },
 
   itemCard: {

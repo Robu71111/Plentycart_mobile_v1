@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,20 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../../lib/cart';
+import { addRecentlyViewed } from '../../lib/recently-viewed';
 import productsRaw from '../../data/products.json';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_HEIGHT = SCREEN_HEIGHT * 0.5;
 const RELATED_WIDTH = 140;
+const SHEET_HEIGHT = 340;
 
 type Product = {
   id: string;
@@ -79,7 +82,7 @@ const REVIEW_TEXTS: Record<string, string[]> = {
     'The sillage is incredible — I kept getting compliments all day long.',
     'Long-lasting and the dry-down is absolutely beautiful. Worth the price.',
     'Exactly as described. The opening notes are fresh and the base is warm and cozy.',
-    'I was hesitant to buy blind but I\'m so glad I did. This is stunning.',
+    "I was hesitant to buy blind but I'm so glad I did. This is stunning.",
     'Great projection and the bottle looks gorgeous on my vanity.',
     'This scent is unique and sophisticated. Gets better as it dries down.',
     'Received several compliments within the first hour of wearing this. Obsessed.',
@@ -104,13 +107,13 @@ type Review = {
 
 function generateReviews(product: Product): Review[] {
   const pid = parseInt(product.id, 10);
-  const count = 3 + Math.floor(seededRand(pid * 7) * 3); // 3–5
+  const count = 3 + Math.floor(seededRand(pid * 7) * 3);
   const pool = REVIEW_TEXTS[product.category] ?? FALLBACK_REVIEWS;
   const usedTextIdx = new Set<number>();
   const usedNameIdx = new Set<number>();
   const reviews: Review[] = [];
 
-  const now = new Date(2026, 3, 29); // deterministic "today"
+  const now = new Date(2026, 3, 29);
 
   for (let i = 0; i < count; i++) {
     const r1 = seededRand(pid * 31 + i * 17);
@@ -118,22 +121,18 @@ function generateReviews(product: Product): Review[] {
     const r3 = seededRand(pid * 11 + i * 43);
     const r4 = seededRand(pid * 67 + i * 7);
 
-    // Pick unique reviewer name
     let nameIdx = Math.floor(r1 * REVIEWER_NAMES.length);
     while (usedNameIdx.has(nameIdx)) nameIdx = (nameIdx + 1) % REVIEWER_NAMES.length;
     usedNameIdx.add(nameIdx);
 
-    // Pick unique review text
     let textIdx = Math.floor(r2 * pool.length);
     while (usedTextIdx.has(textIdx)) textIdx = (textIdx + 1) % pool.length;
     usedTextIdx.add(textIdx);
 
-    // Rating weighted around product.rating (±1 star, biased toward the actual rating)
     const base = Math.round(product.rating);
     const offset = r3 < 0.15 ? -1 : r3 > 0.85 ? 1 : 0;
     const rating = Math.min(5, Math.max(1, base + offset));
 
-    // Date within last 6 months
     const daysAgo = Math.floor(r4 * 180) + 1;
     const d = new Date(now);
     d.setDate(d.getDate() - daysAgo);
@@ -155,10 +154,13 @@ function generateReviews(product: Product): Review[] {
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { addItem } = useCart();
+  const { addItem, items, total: cartTotal } = useCart();
   const insets = useSafeAreaInsets();
-  const toastAnim = useRef(new Animated.Value(0)).current;
-  const [toastVisible, setToastVisible] = useState(false);
+
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const sheetTranslateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const product = products.find((p) => p.id === id);
   const relatedProducts = product
@@ -166,21 +168,56 @@ export default function ProductScreen() {
     : [];
   const reviews = useMemo(() => (product ? generateReviews(product) : []), [product?.id]);
 
-  const showToast = useCallback(() => {
-    setToastVisible(true);
-    toastAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(toastAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.delay(1500),
-      Animated.timing(toastAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
-    ]).start(() => setToastVisible(false));
-  }, [toastAnim]);
+  // Track recently viewed each time screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (product) {
+        addRecentlyViewed({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+        });
+      }
+    }, [product?.id])
+  );
+
+  // Clean up auto-close timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current);
+    };
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    if (autoCloseTimer.current) {
+      clearTimeout(autoCloseTimer.current);
+      autoCloseTimer.current = null;
+    }
+    Animated.parallel([
+      Animated.timing(sheetTranslateY, { toValue: SHEET_HEIGHT, duration: 260, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => setSheetVisible(false));
+  }, [sheetTranslateY, overlayOpacity]);
+
+  const openSheet = useCallback(() => {
+    sheetTranslateY.setValue(SHEET_HEIGHT);
+    overlayOpacity.setValue(0);
+    setSheetVisible(true);
+    Animated.parallel([
+      Animated.spring(sheetTranslateY, { toValue: 0, tension: 120, friction: 9, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+    ]).start();
+    autoCloseTimer.current = setTimeout(closeSheet, 8000);
+  }, [sheetTranslateY, overlayOpacity, closeSheet]);
 
   const handleAddToCart = useCallback(() => {
     if (!product || product.stock === 0) return;
     addItem({ id: product.id, name: product.name, price: product.price, image: product.image });
-    showToast();
-  }, [product, addItem, showToast]);
+    openSheet();
+  }, [product, addItem, openSheet]);
+
+  const totalItems = items.reduce((s, i) => s + i.quantity, 0);
 
   if (!product) {
     return (
@@ -207,30 +244,6 @@ export default function ProductScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Toast banner */}
-      {toastVisible && (
-        <Animated.View
-          style={[
-            styles.toast,
-            {
-              top: insets.top + 10,
-              opacity: toastAnim,
-              transform: [
-                {
-                  translateY: toastAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-16, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Ionicons name="checkmark-circle" size={18} color="#fff" />
-          <Text style={styles.toastText}>Added to cart!</Text>
-        </Animated.View>
-      )}
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
@@ -290,9 +303,7 @@ export default function ProductScreen() {
           </View>
 
           {/* Stock */}
-          <View
-            style={[styles.stockBadge, { backgroundColor: stockStatus.color + '18' }]}
-          >
+          <View style={[styles.stockBadge, { backgroundColor: stockStatus.color + '18' }]}>
             <View style={[styles.stockDot, { backgroundColor: stockStatus.color }]} />
             <Text style={[styles.stockText, { color: stockStatus.color }]}>
               {stockStatus.label}
@@ -396,6 +407,86 @@ export default function ProductScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Add to Cart bottom sheet */}
+      <Modal
+        visible={sheetVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeSheet}
+        statusBarTranslucent
+      >
+        <View style={sheet.wrapper}>
+          {/* Dark overlay — fades in independently */}
+          <Animated.View
+            pointerEvents="none"
+            style={[sheet.overlay, { opacity: overlayOpacity }]}
+          />
+          {/* Tap area above the sheet to close */}
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            onPress={closeSheet}
+            activeOpacity={1}
+          />
+          {/* The sheet — slides up from bottom */}
+          <Animated.View
+            style={[sheet.panel, { transform: [{ translateY: sheetTranslateY }] }]}
+          >
+            {/* Close × */}
+            <TouchableOpacity style={sheet.closeBtn} onPress={closeSheet} hitSlop={8}>
+              <Ionicons name="close" size={18} color="#64748B" />
+            </TouchableOpacity>
+
+            {/* Product row */}
+            <View style={sheet.productRow}>
+              <Image
+                source={{ uri: product.image }}
+                style={sheet.thumb}
+                contentFit="cover"
+                placeholder={{ color: '#F1F5F9' }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={sheet.productName} numberOfLines={2}>{product.name}</Text>
+                <Text style={sheet.productPrice}>${product.price.toFixed(2)}</Text>
+              </View>
+            </View>
+
+            {/* Confirmation */}
+            <View style={sheet.confirmRow}>
+              <View style={sheet.checkCircle}>
+                <Ionicons name="checkmark" size={18} color="#fff" />
+              </View>
+              <Text style={sheet.confirmText}>Added to cart!</Text>
+            </View>
+
+            {/* Cart summary */}
+            <Text style={sheet.cartSummary}>
+              {totalItems} item{totalItems !== 1 ? 's' : ''} · ${cartTotal.toFixed(2)}
+            </Text>
+
+            {/* Checkout Now */}
+            <TouchableOpacity
+              style={sheet.checkoutBtn}
+              onPress={() => {
+                closeSheet();
+                router.push('/checkout/address' as never);
+              }}
+              activeOpacity={0.87}
+            >
+              <Text style={sheet.checkoutBtnText}>Checkout Now →</Text>
+            </TouchableOpacity>
+
+            {/* Continue Shopping */}
+            <TouchableOpacity
+              style={sheet.continueBtn}
+              onPress={closeSheet}
+              activeOpacity={0.7}
+            >
+              <Text style={sheet.continueBtnText}>Continue Shopping</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -516,27 +607,6 @@ const styles = StyleSheet.create({
   addToCartDisabled: { backgroundColor: '#94A3B8' },
   addToCartText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-  toast: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    zIndex: 100,
-    backgroundColor: '#16A34A',
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  toastText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-
   reviewsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   ratingPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -568,4 +638,111 @@ const styles = StyleSheet.create({
   notFoundText: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
   backLink: { paddingVertical: 8, paddingHorizontal: 16 },
   backLinkText: { fontSize: 15, color: '#1A56DB', fontWeight: '600' },
+});
+
+// Bottom sheet styles (separate namespace to keep main styles readable)
+const sheet = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+  },
+  panel: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 24,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  thumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    lineHeight: 19,
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E293B',
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  cartSummary: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  checkoutBtn: {
+    backgroundColor: '#1A56DB',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  checkoutBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  continueBtn: {
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  continueBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#475569',
+  },
 });

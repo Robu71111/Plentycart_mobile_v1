@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { CartProvider } from '../lib/cart';
 import { CheckoutProvider } from '../lib/checkout';
+import { initOrders } from '../lib/orders';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -35,6 +36,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  useEffect(() => { initOrders(); }, []);
+
   return (
     <SafeAreaProvider>
       <AuthProvider>
@@ -42,7 +45,12 @@ export default function RootLayout() {
           <CheckoutProvider>
             <StatusBar style="dark" />
             <AuthGuard>
-              <Stack screenOptions={{ headerShown: false }} />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen
+                  name="profile/index"
+                  options={{ animation: 'slide_from_right', headerShown: false }}
+                />
+              </Stack>
             </AuthGuard>
           </CheckoutProvider>
         </CartProvider>

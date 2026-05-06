@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../lib/auth';
 import { useCheckout, type CheckoutAddress } from '../../lib/checkout';
 import { CheckoutHeader } from '../../components/CheckoutHeader';
+import { ADDRESSES_KEY, type SavedAddress } from '../profile/addresses';
 
 type VerifyState = 'idle' | 'verifying' | 'verified';
 
@@ -34,7 +36,7 @@ function Field({
   placeholder?: string;
   optional?: boolean;
   keyboardType?: 'default' | 'phone-pad' | 'numeric';
-  autoCapitalize?: 'none' | 'words' | 'sentences';
+  autoCapitalize?: 'none' | 'words' | 'sentences' | 'characters';
 }) {
   return (
     <View style={styles.fieldGroup}>
@@ -56,6 +58,25 @@ function Field({
   );
 }
 
+function mapSavedToForm(addr: SavedAddress): CheckoutAddress {
+  return {
+    fullName: addr.fullName,
+    phone: addr.phone ?? '',
+    address1: addr.address1,
+    address2: addr.address2 ?? '',
+    city: addr.city,
+    state: addr.state,
+    zip: addr.zip,
+    country: addr.country,
+  };
+}
+
+const LABEL_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  Home: 'home-outline',
+  Work: 'business-outline',
+  Other: 'location-outline',
+};
+
 export default function AddressScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -73,17 +94,45 @@ export default function AddressScreen() {
   });
   const [error, setError] = useState('');
   const [verifyState, setVerifyState] = useState<VerifyState>('idle');
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [showPicker, setShowPicker] = useState(false);
 
-  // Reset the overlay every time this screen comes back into focus (e.g. user
-  // taps "Edit" from the shipping step and returns here).
+  // Track whether we've auto-pre-filled on mount so we don't override edits on re-focus
+  const prefilled = useRef(false);
+
+  // Load saved addresses for the picker on every focus
   useFocusEffect(
     useCallback(() => {
       setVerifyState('idle');
+      AsyncStorage.getItem(ADDRESSES_KEY).then((raw) => {
+        if (!raw) return;
+        const all: SavedAddress[] = JSON.parse(raw);
+        setSavedAddresses(all);
+      });
     }, [])
   );
 
+  // Pre-fill from default saved address once on mount (only if checkout has no address yet)
+  useEffect(() => {
+    if (saved || prefilled.current) return;
+    AsyncStorage.getItem(ADDRESSES_KEY).then((raw) => {
+      if (!raw) return;
+      const all: SavedAddress[] = JSON.parse(raw);
+      const def = all.find((a) => a.is_default) ?? (all.length === 1 ? all[0] : null);
+      if (def) {
+        setForm(mapSavedToForm(def));
+        prefilled.current = true;
+      }
+    });
+  }, []);
+
   const set = (key: keyof CheckoutAddress) => (val: string) =>
     setForm((prev) => ({ ...prev, [key]: val }));
+
+  const applyAddress = (addr: SavedAddress) => {
+    setForm(mapSavedToForm(addr));
+    setShowPicker(false);
+  };
 
   const handleContinue = async () => {
     const required: (keyof CheckoutAddress)[] = [
@@ -117,6 +166,60 @@ export default function AddressScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Saved addresses picker */}
+          {savedAddresses.length > 0 && (
+            <View style={styles.savedCard}>
+              <TouchableOpacity
+                style={styles.savedHeader}
+                onPress={() => setShowPicker((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.savedHeaderLeft}>
+                  <Ionicons name="bookmark-outline" size={15} color="#1A56DB" />
+                  <Text style={styles.savedHeaderText}>Saved Addresses</Text>
+                  <View style={styles.savedCountBadge}>
+                    <Text style={styles.savedCountText}>{savedAddresses.length}</Text>
+                  </View>
+                </View>
+                <Ionicons
+                  name={showPicker ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color="#64748B"
+                />
+              </TouchableOpacity>
+
+              {showPicker && (
+                <View style={styles.savedList}>
+                  {savedAddresses.map((addr, i) => (
+                    <TouchableOpacity
+                      key={addr.id}
+                      style={[styles.savedItem, i > 0 && styles.savedItemBorder]}
+                      onPress={() => applyAddress(addr)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.savedItemLeft}>
+                        <Ionicons
+                          name={LABEL_ICONS[addr.label] ?? 'location-outline'}
+                          size={14}
+                          color="#1A56DB"
+                        />
+                        <Text style={styles.savedItemLabel}>{addr.label}</Text>
+                        {addr.is_default && (
+                          <View style={styles.defaultBadge}>
+                            <Text style={styles.defaultBadgeText}>Default</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.savedItemAddr} numberOfLines={1}>
+                        {addr.address1}, {addr.city}, {addr.state}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
           <Field label="Full Name" value={form.fullName} onChangeText={set('fullName')} />
           <Field
             label="Phone"
@@ -188,7 +291,7 @@ export default function AddressScreen() {
                   <Ionicons name="checkmark" size={28} color="#fff" />
                 </View>
                 <Text style={[styles.overlayText, { color: '#16A34A' }]}>
-                  Address verified ✓
+                  Address verified
                 </Text>
               </>
             )}
@@ -204,6 +307,44 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 20, gap: 4, paddingBottom: 40 },
 
+  savedCard: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  savedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  savedHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  savedHeaderText: { fontSize: 13, fontWeight: '700', color: '#1A56DB' },
+  savedCountBadge: {
+    backgroundColor: '#1A56DB',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedCountText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  savedList: { borderTopWidth: 1, borderTopColor: '#C7D2FE', backgroundColor: '#fff' },
+  savedItem: { paddingHorizontal: 14, paddingVertical: 12 },
+  savedItemBorder: { borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  savedItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
+  savedItemLabel: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+  defaultBadge: {
+    backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: 4,
+  },
+  defaultBadgeText: { fontSize: 10, fontWeight: '700', color: '#1A56DB' },
+  savedItemAddr: { fontSize: 12, color: '#64748B' },
+
   row: { flexDirection: 'row', gap: 12 },
 
   fieldGroup: { marginBottom: 12 },
@@ -217,7 +358,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: '#1E293B',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#fff',
   },
 
   error: { fontSize: 13, color: '#DC2626', marginBottom: 4 },

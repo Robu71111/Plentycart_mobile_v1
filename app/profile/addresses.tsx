@@ -81,7 +81,7 @@ export default function AddressesScreen() {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
             {addresses.map((addr) => (
               <View key={addr.id} style={styles.card}>
                 <View style={styles.cardTop}>
@@ -131,16 +131,17 @@ export default function AddressesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#fff',
     borderBottomWidth: 1, borderBottomColor: '#E2E8F0',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1E293B' },
+  scroll: { flex: 1, backgroundColor: '#F8FAFC' },
   empty: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 32, gap: 12,
+    paddingHorizontal: 32, gap: 12, backgroundColor: '#F8FAFC',
   },
   emptyIcon: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: '#F1F5F9',
