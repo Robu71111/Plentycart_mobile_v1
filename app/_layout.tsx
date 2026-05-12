@@ -47,7 +47,7 @@ export default function RootLayout() {
             <AuthGuard>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen
-                  name="profile/index"
+                  name="profile"
                   options={{ animation: 'slide_from_right', headerShown: false }}
                 />
               </Stack>
